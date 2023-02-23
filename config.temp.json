@@ -1,0 +1,5 @@
+{
+  "host": "",
+  "mysql": "user:password.@tcp(47.109.17.168:13306)/db_name",
+  "redis": ""
+}
