@@ -17,4 +17,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("数据库连接错误 %s \n", err.Error())
 	}
+
 }

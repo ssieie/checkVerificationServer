@@ -1,15 +1,13 @@
 package utils
 
 import (
-	"crypto/md5"
+	"crypto/aes"
+	"crypto/cipher"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 func ParsePostData(data io.ReadCloser) (rData map[string]interface{}, err error) {
@@ -41,37 +39,35 @@ func JSON(res Z) (data []byte) {
 	return
 }
 
-func VerifyPostParams(data map[string]interface{}) bool {
-
-	var str = "key=ZhaoXin&"
-
-	var arr []string
-
-	for key := range data {
-		arr = append(arr, key)
+func decryptData(encryptedData []byte, key []byte) (map[string]interface{}, error) {
+	// 将密钥转换成 AES 密钥类型
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
 	}
 
-	sort.Strings(arr)
+	// 将加密数据和初始向量拆分出来
+	iv := encryptedData[:aes.BlockSize]
+	cipherData := encryptedData[aes.BlockSize:]
 
-	for _, key := range arr {
-		if key == "sign" {
-			continue
-		}
-		switch data[key].(type) {
-		case string:
-			str += key + "=" + data[key].(string) + "&"
-		case int:
-			str += key + "=" + strconv.Itoa(data[key].(int)) + "&"
-		case bool:
-			str += key + "=" + strconv.FormatBool(data[key].(bool)) + "&"
-		case float64:
-			str += key + "=" + strconv.FormatFloat(data[key].(float64), 'g', 10, 64) + "&"
-		}
+	// 使用 CBC 模式解密数据
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(cipherData, cipherData)
+
+	// 将解密后的字符串转换成 JSON 对象
+	var data map[string]interface{}
+	err = json.Unmarshal(cipherData, &data)
+	if err != nil {
+		return nil, err
 	}
 
-	sign := strings.ToUpper(fmt.Sprintf("%x", md5.Sum([]byte(strings.TrimSuffix(str, "&")))))
+	// 验证请求参数是否完整
+	if _, ok := data["data"]; !ok {
+		return nil, errors.New("请求参数不完整")
+	}
 
-	return sign == data["sign"]
+	// 返回解密后的数据
+	return data, nil
 }
 
 type ConfigType struct {
