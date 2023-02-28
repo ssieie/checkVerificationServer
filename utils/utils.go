@@ -3,34 +3,13 @@ package utils
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 )
-
-func ParsePostData(data io.ReadCloser) (rData map[string]interface{}, err error) {
-
-	res, err := io.ReadAll(data)
-	if err != nil {
-		return nil, err
-	}
-
-	var r interface{}
-
-	err = json.Unmarshal(res, &r)
-	if err != nil {
-		return nil, err
-	}
-
-	rData, ok := r.(map[string]interface{})
-	if !ok {
-		return nil, errors.New("parse data err 断言失败")
-	}
-
-	return rData, nil
-}
 
 type Z map[string]interface{}
 
@@ -39,39 +18,72 @@ func JSON(res Z) (data []byte) {
 	return
 }
 
-func decryptData(encryptedData []byte, key []byte) (map[string]interface{}, error) {
-	// 将密钥转换成 AES 密钥类型
+var sysKey = []byte("wc666wc666wc6666")
+
+func decrypt(cipherText string, key []byte) (map[string]interface{}, error) {
+	// 解析加密后的数据
+	cipherData, err := base64.StdEncoding.DecodeString(cipherText)
+	if err != nil {
+		return nil, errors.New("base64 decode error:" + err.Error())
+	}
+	// 提取随机向量和密文
+	iv := cipherData[:aes.BlockSize]
+	ciphertext := cipherData[aes.BlockSize:]
+
+	// 创建解密器
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("cipher error:" + err.Error())
 	}
-
-	// 将加密数据和初始向量拆分出来
-	iv := encryptedData[:aes.BlockSize]
-	cipherData := encryptedData[aes.BlockSize:]
-
-	// 使用 CBC 模式解密数据
 	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(cipherData, cipherData)
 
-	// 将解密后的字符串转换成 JSON 对象
+	// 解密数据
+	plaintext := make([]byte, len(ciphertext))
+	mode.CryptBlocks(plaintext, ciphertext)
+
+	// 去除填充
+	padding := int(plaintext[len(plaintext)-1])
+	plaintext = plaintext[:len(plaintext)-padding]
+
+	// 将解密后的数据反序列化为原始数据类型
 	var data map[string]interface{}
-	err = json.Unmarshal(cipherData, &data)
-	if err != nil {
-		return nil, err
+	if err := json.Unmarshal(plaintext, &data); err != nil {
+		return nil, errors.New("json decode error:" + err.Error())
 	}
-
-	// 验证请求参数是否完整
-	if _, ok := data["data"]; !ok {
-		return nil, errors.New("请求参数不完整")
-	}
-
-	// 返回解密后的数据
 	return data, nil
 }
 
+type reqData struct {
+	InputData string `json:"input_data"`
+}
+
+func Parse(r io.ReadCloser) (rData map[string]interface{}, err error) {
+
+	res, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var data reqData
+
+	err = json.Unmarshal(res, &data)
+	if err != nil {
+		return nil, err
+	}
+	if data.InputData == "" {
+		return nil, errors.New("InputData is empty")
+	}
+
+	parseData, err := decrypt(data.InputData, sysKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseData, nil
+}
+
 type ConfigType struct {
-	Host  string `json:"host"`
+	Port  string `json:"port"`
 	Mysql string `json:"mysql"`
 	Redis string `json:"redis"`
 }
@@ -99,3 +111,5 @@ func ParsConfig() error {
 
 	return nil
 }
+
+const TimeFormat = "2006-01-02 15:04:05"
