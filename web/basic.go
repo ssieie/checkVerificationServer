@@ -21,6 +21,22 @@ func (b *Website) GetVerify(w http.ResponseWriter, r *http.Request) {
 		}
 	}(r.Body)
 
+	generator, err := X.PicGenerator()
+	if err != nil {
+		_, _ = w.Write(X.JSON(X.Z{
+			"code": http.StatusBadRequest,
+			"msg":  err.Error(),
+		}))
+		return
+	}
+
+	_, _ = w.Write(X.JSON(X.Z{
+		"code": http.StatusOK,
+		"data": generator,
+	}))
+
+	return
+
 	parse, err := X.Parse(r.Body)
 	if err != nil {
 		_, _ = w.Write(X.JSON(X.Z{

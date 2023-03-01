@@ -86,6 +86,7 @@ type ConfigType struct {
 	Port  string `json:"port"`
 	Mysql string `json:"mysql"`
 	Redis string `json:"redis"`
+	Font  string `json:"font"`
 }
 
 var SysConfig ConfigType

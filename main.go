@@ -7,26 +7,30 @@ import (
 	"log"
 )
 
-func main() {
-
+func init() {
 	err := utils.ParsConfig()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
+	utils.LoadFontFace()
+}
+
+func main() {
+
 	if utils.GetConfig().Mysql != "" {
-		err = model.InitDB()
+		err := model.InitDB()
 		if err != nil {
 			log.Fatalf("Mysql连接错误 %s \n", err.Error())
 		}
 	} else {
-		err = model.InitRedis()
+		err := model.InitRedis()
 		if err != nil {
 			log.Fatalf("Redis连接错误 %s \n", err.Error())
 		}
 	}
 
-	err = web.InitHttp()
+	err := web.InitHttp()
 	if err != nil {
 		log.Fatalf("http server err %s \n", err.Error())
 	}

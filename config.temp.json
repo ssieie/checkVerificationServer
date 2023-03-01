@@ -1,5 +1,6 @@
 {
   "host": "",
   "mysql": "user:password@tcp(ip:port)/db_name",
-  "redis": ""
+  "redis": "",
+  "font": "2.ttf"
 }

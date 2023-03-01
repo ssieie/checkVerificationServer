@@ -5,6 +5,7 @@ import (
 	"checkVerification/utils"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 var website Website
@@ -13,7 +14,7 @@ func InitHttp() (err error) {
 	// website
 	http.Handle("/getVerify", middleware.HttpHandler(http.HandlerFunc(website.GetVerify)))
 
-	fmt.Printf("Server is running port: %s \n", utils.GetConfig().Port)
+	fmt.Printf("[%s]Server is running port: %s \n", time.Now().Format(utils.TimeFormat), utils.GetConfig().Port)
 
 	err = http.ListenAndServe(":"+utils.GetConfig().Port, nil)
 
